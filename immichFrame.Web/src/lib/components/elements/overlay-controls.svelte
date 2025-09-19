@@ -9,6 +9,8 @@
 	import Icon from './icon.svelte';
 	import { ProgressBarStatus } from './progress-bar.svelte';
 
+	let force_overlay_off = true;
+
 	interface Props {
 		status: ProgressBarStatus;
 		overlayVisible: boolean;
@@ -70,7 +72,7 @@
 
 <svelte:window use:shortcuts={shortcutList} />
 
-{#if overlayVisible}
+{#if overlayVisible && !force_overlay_off}
 	<div class="inset-0 z-[100] grid grid-cols-3 gap-2 {infoVisible ? 'hidden' : ''}">
 		<div id="overlayback" class="group grid place-items-center">
 			<button class="opacity-0 group-hover:opacity-100 text-primary" onclick={back}
