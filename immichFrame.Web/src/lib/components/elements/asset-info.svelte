@@ -28,6 +28,7 @@
 
 	function formatLocation(format: string, city?: string, state?: string, country?: string) {
 		const locationParts: Array<string> = new Array();
+		const myCountry = "United States of America";
 
 		format.split(',').forEach((part) => {
 			const trimmedPart = part.trim().toLowerCase();
@@ -35,7 +36,7 @@
 				locationParts.push(city);
 			} else if (trimmedPart === 'state' && state) {
 				locationParts.push(state);
-			} else if (trimmedPart === 'country' && country) {
+			} else if (trimmedPart === 'country' && country && country != myCountry) {
 				locationParts.push(country);
 			}
 		});
