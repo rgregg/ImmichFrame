@@ -9,6 +9,7 @@
 	api.init();
 
 	let weather = $state<api.IWeather | null>(null);
+	let weatherIconSrc = $state<string | null>(null);
 
 	const localeToUse = $derived(
 		() => locale[$configStore.language as keyof typeof locale] ?? locale.enUS
@@ -50,6 +51,15 @@
 			console.error('Error fetching weather:', err);
 		}
 	}
+
+	function resolveWeatherIcon(template?: string | null, iconId?: string | null) {
+		if (!template || !iconId) return null;
+		return template.replace('{IconId}', encodeURIComponent(iconId));
+	}
+
+	$effect(() => {
+		weatherIconSrc = resolveWeatherIcon($configStore.weatherIconUrl, weather?.iconId ?? null);
+	});
 </script>
 
 <div
@@ -75,8 +85,8 @@
 				id="clockweatherinfo"
 				class="text-xl sm:text-xl md:text-2xl lg:text-3xl font-semibold text-shadow-sm weather-info"
 			>
-				{#if $configStore.weatherIconUrl }
-				<img src="{ $configStore.weatherIconUrl.replace('{IconId}', encodeURIComponent(weather.iconId)) }" class="icon-weather" alt="{weather.description}">
+				{#if weatherIconSrc}
+				<img src={weatherIconSrc} class="icon-weather" alt={weather.description ?? ''}>
 				{/if}
 				<div class="weather-location">{weather.location},</div>
 				<div class="weather-temperature">{weather.temperature?.toFixed(1)}</div>

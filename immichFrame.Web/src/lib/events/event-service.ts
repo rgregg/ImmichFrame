@@ -46,6 +46,10 @@ export const activeEvent = {
   subscribe: activeEventStore.subscribe
 };
 
+export function clearActiveEvent() {
+  activeEventStore.set(null);
+}
+
 let pollingController: AbortController | null = null;
 
 export function startEventPolling(deviceId: string) {
