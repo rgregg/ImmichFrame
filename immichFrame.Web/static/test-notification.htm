@@ -1,11 +1,41 @@
-  <html>
-    <title>Test Notification</title>
+<!DOCTYPE html>
+  <html lang="en">
+    <head>
+      <meta charset="utf-8" />
+      <title>ImmichFrame Cover Demo</title>
+      <style>
+        html, body {
+          margin: 0;
+          padding: 0;
+          background: #fff;          /* white backdrop */
+          color: #111;
+          font-family: system-ui, sans-serif;
+          height: 100%;
+          overflow: hidden;
+        }
+
+        #app {
+          min-height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 2rem;
+        }
+      </style>
+    </head>
+    <body>
+      <div id="app">
+        <h1>Welcome!</h1>
+      </div>
+
+      <script>
+        // Handshake with ImmichFrame
+        window.parent.postMessage({ kind: 'app:ready' }, '*');
+        window.addEventListener('message', (event) => {
+          if (event.data?.kind === 'frame:close') {
+            window.parent.postMessage({ kind: 'app:requestClose' }, '*');
+          }
+        });
+      </script>
+    </body>
   </html>
-  
-  <h1>This is a test notification app</h1>
-  
-  <script>
-    document.onload = 
-    window.parent.postMessage({ kind: 'app:ready' }, '*');
-    // Optionally respond to hello/context, request close, etc.
-  </script>
