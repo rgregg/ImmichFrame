@@ -57,5 +57,9 @@
         public bool ImageFill { get; }
         public string Layout { get; }
         public string Language { get; }
+        public IReadOnlyList<string> EventAllowedOrigins { get; }
+        public IReadOnlyList<string> EventDefaultSandbox { get; }
+        public int EventPollingIntervalSeconds { get; }
+        public int EventDefaultTimeoutMs { get; }
     }
 }

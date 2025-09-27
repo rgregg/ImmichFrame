@@ -60,6 +60,24 @@ public class GeneralSettings : IGeneralSettings, IConfigSettable
     public string? WeatherLatLong { get; set; } = "40.7128,74.0060";
     public string? Webhook { get; set; }
     public string? AuthenticationSecret { get; set; }
+    [YamlMember(Alias = "EventAllowedOrigins")]
+    [JsonPropertyName("EventAllowedOrigins")]
+    public List<string> EventAllowedOriginsImpl { get; set; } = new();
+
+    [YamlMember(Alias = "EventDefaultSandbox")]
+    [JsonPropertyName("EventDefaultSandbox")]
+    public List<string> EventDefaultSandboxImpl { get; set; } = new() { "allow-scripts", "allow-same-origin" };
+
+    public int EventPollingIntervalSeconds { get; set; } = 2;
+    public int EventDefaultTimeoutMs { get; set; } = 15000;
+
+    [JsonIgnore]
+    [YamlIgnore]
+    public IReadOnlyList<string> EventAllowedOrigins => EventAllowedOriginsImpl;
+
+    [JsonIgnore]
+    [YamlIgnore]
+    public IReadOnlyList<string> EventDefaultSandbox => EventDefaultSandboxImpl;
 }
 
 public class ServerAccountSettings : IAccountSettings, IConfigSettable

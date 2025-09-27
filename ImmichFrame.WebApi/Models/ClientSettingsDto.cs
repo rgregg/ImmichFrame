@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using ImmichFrame.Core.Interfaces;
 
 namespace ImmichFrame.WebApi.Models;
@@ -30,6 +32,10 @@ public class ClientSettingsDto
     public bool ImageFill { get; set; }
     public string Layout { get; set; }
     public string Language { get; set; }
+    public List<string> EventAllowedOrigins { get; set; } = new();
+    public List<string> EventDefaultSandbox { get; set; } = new();
+    public int EventPollingIntervalSeconds { get; set; }
+    public int EventDefaultTimeoutMs { get; set; }
 
     public static ClientSettingsDto FromGeneralSettings(IGeneralSettings generalSettings)
     {
@@ -60,6 +66,10 @@ public class ClientSettingsDto
         dto.ImageFill = generalSettings.ImageFill;
         dto.Layout = generalSettings.Layout;
         dto.Language = generalSettings.Language;
+        dto.EventAllowedOrigins = generalSettings.EventAllowedOrigins.ToList();
+        dto.EventDefaultSandbox = generalSettings.EventDefaultSandbox.ToList();
+        dto.EventPollingIntervalSeconds = generalSettings.EventPollingIntervalSeconds;
+        dto.EventDefaultTimeoutMs = generalSettings.EventDefaultTimeoutMs;
         return dto;
     }
 }
