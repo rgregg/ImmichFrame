@@ -31,6 +31,7 @@ public class InMemoryFrameEventQueue : IFrameEventQueue
         private readonly Dictionary<string, EventRecord> _eventsById = new();
         private readonly Dictionary<string, string> _categoryIndex = new();
         private readonly SortedSet<EventRecord> _priorityQueue = new(new EventComparer());
+        private readonly Dictionary<string, FrameEventAckStatus> _ackStatusById = new();
 
         public string? ActiveEventId { get; set; }
 
@@ -63,6 +64,8 @@ public class InMemoryFrameEventQueue : IFrameEventQueue
             {
                 _categoryIndex[record.Event.Category!] = record.Event.Id;
             }
+
+            _ackStatusById[record.Event.Id] = FrameEventAckStatus.Shown; // default state placeholder
         }
 
         public IEnumerable<EventRecord> RemoveByCategory(string category)
@@ -93,11 +96,17 @@ public class InMemoryFrameEventQueue : IFrameEventQueue
             return _priorityQueue.FirstOrDefault();
         }
 
-        public bool Remove(string eventId)
+        public bool UpdateStatus(string eventId, FrameEventAckStatus status)
         {
             if (!_eventsById.TryGetValue(eventId, out var record))
             {
                 return false;
+            }
+
+            if (status == FrameEventAckStatus.Shown)
+            {
+                _ackStatusById[eventId] = status;
+                return true;
             }
 
             RemoveRecord(record);
@@ -129,6 +138,7 @@ public class InMemoryFrameEventQueue : IFrameEventQueue
                 }
             }
 
+            _ackStatusById.Remove(record.Event.Id);
             if (ActiveEventId == record.Event.Id)
             {
                 ActiveEventId = null;
@@ -212,7 +222,7 @@ public class InMemoryFrameEventQueue : IFrameEventQueue
         lock (queue)
         {
             queue.RemoveExpired();
-            return Task.FromResult(queue.Remove(eventId));
+            return Task.FromResult(queue.UpdateStatus(eventId, status));
         }
     }
 

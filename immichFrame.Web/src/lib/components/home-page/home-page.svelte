@@ -144,12 +144,12 @@
 		void acknowledgeEvent(deviceId, currentEvent.id, 'Shown');
 	}
 
-	async function dismissEvent(status: FrameEventAckStatus) {
-		if (!currentEvent) {
+	async function dismissEvent(status: FrameEventAckStatus, explicitEvent: FrameEvent | null = null) {
+		const target = explicitEvent ?? currentEvent;
+		if (!target) {
 			return;
 		}
 
-		const target = currentEvent;
 		clearEventTimer();
 		clearActiveEvent();
 		if (!deviceId) {
@@ -174,6 +174,11 @@
 				void progressBar.play();
 			}
 			eventPausedSlideshow = false;
+			return;
+		}
+
+		if (event.mode === 'Close') {
+			void dismissEvent('Closed', event);
 			return;
 		}
 
@@ -498,7 +503,13 @@
 
 		<Appointments />
 
-		<EventOverlayHost event={currentEvent} dismiss={dismissEvent} />
+			<EventOverlayHost
+				event={currentEvent}
+				dismiss={dismissEvent}
+				deviceId={deviceId}
+				theme={$configStore.style ?? 'default'}
+				locale={$configStore.language ?? 'en'}
+			/>
 
 		<OverlayControls
 			next={async () => {

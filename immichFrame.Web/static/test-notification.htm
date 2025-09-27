@@ -1,0 +1,11 @@
+  <html>
+    <title>Test Notification</title>
+  </html>
+  
+  <h1>This is a test notification app</h1>
+  
+  <script>
+    document.onload = 
+    window.parent.postMessage({ kind: 'app:ready' }, '*');
+    // Optionally respond to hello/context, request close, etc.
+  </script>
