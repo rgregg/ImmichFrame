@@ -36,6 +36,7 @@ public class ClientSettingsDto
     public List<string> EventDefaultSandbox { get; set; } = new();
     public int EventPollingIntervalSeconds { get; set; }
     public int EventDefaultTimeoutMs { get; set; }
+    public bool EventHostEnabled { get; set; }
 
     public static ClientSettingsDto FromGeneralSettings(IGeneralSettings generalSettings)
     {
@@ -70,6 +71,7 @@ public class ClientSettingsDto
         dto.EventDefaultSandbox = generalSettings.EventDefaultSandbox.ToList();
         dto.EventPollingIntervalSeconds = generalSettings.EventPollingIntervalSeconds;
         dto.EventDefaultTimeoutMs = generalSettings.EventDefaultTimeoutMs;
+        dto.EventHostEnabled = generalSettings.EventHostEnabled;
         return dto;
     }
 }

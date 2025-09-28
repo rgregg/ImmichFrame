@@ -53,6 +53,7 @@ public class ServerSettingsV1 : IConfigSettable
     public bool ImagePan { get; set; } = false;
     public bool ImageFill { get; set; } = false;
     public string Layout { get; set; } = "splitview";
+    public bool EventHostEnabled { get; set; } = false;
     public List<string> EventAllowedOrigins { get; set; } = new();
     public List<string> EventDefaultSandbox { get; set; } = new() { "allow-scripts", "allow-same-origin" };
     public int EventPollingIntervalSeconds { get; set; } = 2;
@@ -120,6 +121,7 @@ public class ServerSettingsV1Adapter(ServerSettingsV1 _delegate) : IServerSettin
         public bool ImageFill => _delegate.ImageFill;
         public string Layout => _delegate.Layout;
         public string Language => _delegate.Language;
+        public bool EventHostEnabled => _delegate.EventHostEnabled;
         public IReadOnlyList<string> EventAllowedOrigins => _delegate.EventAllowedOrigins;
         public IReadOnlyList<string> EventDefaultSandbox => _delegate.EventDefaultSandbox;
         public int EventPollingIntervalSeconds => _delegate.EventPollingIntervalSeconds;

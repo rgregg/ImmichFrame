@@ -6,13 +6,17 @@ export type ClientSettingsWithUx = ClientSettingsDto & {
   eventDefaultSandbox?: string[];
   eventPollingIntervalSeconds?: number;
   eventDefaultTimeoutMs?: number;
+  eventHostEnabled?: boolean;
 };
 
 function createConfigStore(settings: ClientSettingsWithUx) {
   const { subscribe, set, update } = writable<ClientSettingsWithUx>(settings);
 
   function ps(settings: ClientSettingsDto) {
-    set(settings as ClientSettingsWithUx);
+    set({
+      ...settings,
+      eventHostEnabled: settings.eventHostEnabled ?? false
+    } as ClientSettingsWithUx);
   }
 
   function patch(partial: Partial<ClientSettingsWithUx>) {

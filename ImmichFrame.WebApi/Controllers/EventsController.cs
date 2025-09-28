@@ -15,12 +15,14 @@ public class EventsController : ControllerBase
     private readonly IFrameEventQueue _queue;
     private readonly FrameEventValidator _validator;
     private readonly ILogger<EventsController> _logger;
+    private readonly IGeneralSettings _settings;
 
-    public EventsController(IFrameEventQueue queue, FrameEventValidator validator, ILogger<EventsController> logger)
+    public EventsController(IFrameEventQueue queue, FrameEventValidator validator, ILogger<EventsController> logger, IGeneralSettings settings)
     {
         _queue = queue;
         _validator = validator;
         _logger = logger;
+        _settings = settings;
     }
 
     [HttpPost]
@@ -28,6 +30,11 @@ public class EventsController : ControllerBase
     {
         try
         {
+            if (!_settings.EventHostEnabled)
+            {
+                return NotFound(new { message = "Event host is disabled" });
+            }
+
             var frameEvent = _validator.Validate(request);
             var enqueued = await _queue.EnqueueAsync(frameEvent, cancellationToken);
 
@@ -53,6 +60,11 @@ public class EventsController : ControllerBase
             return BadRequest(new { message = "deviceId is required" });
         }
 
+        if (!_settings.EventHostEnabled)
+        {
+            return NotFound(new { message = "Event host is disabled" });
+        }
+
         var frameEvent = await _queue.PeekNextAsync(deviceId, cancellationToken);
 
         if (frameEvent is null)
@@ -69,6 +81,11 @@ public class EventsController : ControllerBase
         if (string.IsNullOrWhiteSpace(deviceId))
         {
             return BadRequest(new { message = "deviceId is required" });
+        }
+
+        if (!_settings.EventHostEnabled)
+        {
+            return NotFound(new { message = "Event host is disabled" });
         }
 
         var removed = await _queue.AckAsync(deviceId, eventId, request.Status, cancellationToken);
@@ -88,6 +105,11 @@ public class EventsController : ControllerBase
         if (string.IsNullOrWhiteSpace(deviceId))
         {
             return BadRequest(new { message = "deviceId is required" });
+        }
+
+        if (!_settings.EventHostEnabled)
+        {
+            return NotFound(new { message = "Event host is disabled" });
         }
 
         var snapshot = _queue.GetDeviceSnapshot(deviceId);

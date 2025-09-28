@@ -102,7 +102,16 @@
 			return;
 		}
 
+		const eventHostEnabled = $configStore.eventHostEnabled ?? false;
 		const id = deviceId;
+
+		if (!eventHostEnabled) {
+			stopEventPolling();
+			pollingDeviceId = null;
+			currentEvent = null;
+			return;
+		}
+
 		if (id && id !== pollingDeviceId) {
 			startEventPolling(id);
 			pollingDeviceId = id;
@@ -137,6 +146,9 @@
 	}
 
 	function markEventShownOnce() {
+		if (!($configStore.eventHostEnabled ?? false)) {
+			return;
+		}
 		if (!currentEvent || eventShownAcked || !deviceId) {
 			return;
 		}
@@ -145,6 +157,9 @@
 	}
 
 	async function dismissEvent(status: FrameEventAckStatus, explicitEvent: FrameEvent | null = null) {
+		if (!($configStore.eventHostEnabled ?? false)) {
+			return;
+		}
 		const target = explicitEvent ?? currentEvent;
 		if (!target) {
 			return;
@@ -164,6 +179,10 @@
 	}
 
 	function handleActiveEvent(event: FrameEvent | null) {
+		if (!($configStore.eventHostEnabled ?? false)) {
+			currentEvent = null;
+			return;
+		}
 		clearEventTimer();
 
 		if (!event) {
@@ -503,6 +522,7 @@
 
 		<Appointments />
 
+		{#if $configStore.eventHostEnabled}
 			<EventOverlayHost
 				event={currentEvent}
 				dismiss={dismissEvent}
@@ -510,6 +530,7 @@
 				theme={$configStore.style ?? 'default'}
 				locale={$configStore.language ?? 'en'}
 			/>
+		{/if}
 
 		<OverlayControls
 			next={async () => {

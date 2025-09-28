@@ -53,6 +53,11 @@ export function clearActiveEvent() {
 let pollingController: AbortController | null = null;
 
 export function startEventPolling(deviceId: string) {
+  const settings = get(configStore) as ClientSettingsWithUx;
+  if (!settings.eventHostEnabled) {
+    activeEventStore.set(null);
+    return;
+  }
   stopEventPolling();
   pollingController = new AbortController();
   void pollLoop(deviceId, pollingController);
@@ -68,6 +73,12 @@ async function pollLoop(deviceId: string, controller: AbortController) {
   const intervalMs = Math.max(500, (settings.eventPollingIntervalSeconds ?? 2) * 1000);
 
   while (!controller.signal.aborted) {
+    if (!get(configStore).eventHostEnabled) {
+      activeEventStore.set(null);
+      await delay(intervalMs, controller.signal);
+      continue;
+    }
+
     try {
       const response = await fetch(`/api/events/next?deviceId=${encodeURIComponent(deviceId)}`, {
         method: 'GET',
@@ -92,6 +103,9 @@ async function pollLoop(deviceId: string, controller: AbortController) {
 }
 
 export async function acknowledgeEvent(deviceId: string, eventId: string, status: FrameEventAckStatus) {
+  if (!get(configStore).eventHostEnabled) {
+    return;
+  }
   try {
     await fetch(`/api/events/${encodeURIComponent(eventId)}/ack?deviceId=${encodeURIComponent(deviceId)}`, {
       method: 'POST',

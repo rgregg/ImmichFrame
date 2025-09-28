@@ -220,6 +220,9 @@ avoids MQTT and iframe authoring overhead:
 - **Configuration changes**: Extend the existing config with fields for
   allowed origins, default sandbox flags, and polling interval so the SPA
   can connect to the new endpoints.
+- **Opt-in flag**: The general setting `EventHostEnabled` defaults to `false`.
+  When disabled the API returns `404` for event endpoints and the SPA skips
+  polling/overlays.
 - **Future work**: MQTT/WebSocket delivery, iframe demo apps, telemetry,
   and digital signature verification remain post-MVP.
 
@@ -233,8 +236,35 @@ avoids MQTT and iframe authoring overhead:
     `Shown|Closed|Timeout|Error`. Response echoes the status for logging.  
   - `GET /api/events/pending?deviceId=<id>` – returns a diagnostics view of
     pending events and their last acknowledged status.
+- All endpoints are disabled (HTTP 404) when `EventHostEnabled=false`.
 - **Logging**: Every acknowledgement is logged at Information level with the
   device id, event id, and status.
 - **Demo iframe**: `static/demo/cover-demo.html` demonstrates the handshake
   (`app:ready`, `frame:context`, `app:requestClose`, `app:resize`) and can be
   loaded via `url="/demo/cover-demo.html"` for local testing.
+
+## 15. Proposed Post-MVP Enhancements
+
+These items represent the next tranche of work once the HTTP + overlay MVP is
+validated. Prioritize/adjust based on field feedback:
+
+1. **Realtime transport** – add MQTT/WebSocket delivery alongside HTTP polling,
+   including outbound acknowledgements and presence heartbeats.
+2. **Persistent storage** – optional backing store so queued events survive
+   frame/app restarts rather than living purely in-memory.
+3. **Telemetry pipeline** – forward `app:telemetry` events to Application
+   Insights/Prometheus for diagnostics, with opt-in anonymisation controls.
+4. **UI polish** – theming hooks for overlays (custom CSS, configurable
+   backdrops), animated transitions, and on-frame controls for dismiss/retry.
+5. **Security hardening** – signature validation for events (`security.signature`),
+   CSP headers per event origin, and optional per-event token requirements.
+6. **Scenario templates** – out-of-the-box iframe apps (doorbell, weather alert,
+   calendar overview) plus developer scripts for local scaffolding.
+7. **Admin tooling** – dashboard for viewing event history, resend/force-close
+   controls, and device status (online/offline, last ack).
+8. **Testing & CI** – automated integration tests that spin up the API + SPA,
+   trigger events, and verify overlay behaviour via Playwright or Cypress.
+9. **Accessibility** – ensure postMessage-enabled apps can request focus,
+   surface keyboard shortcuts, and communicate screen-reader friendly metadata.
+10. **Multi-frame routing** – rules engine for broadcasting events to groups of
+    frames, with per-device overrides and rate limiting.
