@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using ImmichFrame.Core.Events;
 using ImmichFrame.Core.Interfaces;
 using ImmichFrame.WebApi.Models.Events;
@@ -77,7 +78,27 @@ public class EventsController : ControllerBase
             return NotFound();
         }
 
-        _logger.LogDebug("Acked event {EventId} for {DeviceId} with status {Status}", eventId, deviceId, request.Status);
-        return NoContent();
+        _logger.LogInformation("Acked event {EventId} for {DeviceId} with status {Status}", eventId, deviceId, request.Status);
+        return Ok(new { eventId, deviceId, status = request.Status.ToString() });
+    }
+
+    [HttpGet("pending")]
+    public IActionResult GetPending([FromQuery] string deviceId)
+    {
+        if (string.IsNullOrWhiteSpace(deviceId))
+        {
+            return BadRequest(new { message = "deviceId is required" });
+        }
+
+        var snapshot = _queue.GetDeviceSnapshot(deviceId);
+        var dto = new FrameEventDiagnosticsDto
+        {
+            DeviceId = deviceId,
+            Pending = snapshot
+                .Select(tuple => FrameEventStateDto.From(tuple.Event, tuple.LastAckStatus))
+                .ToList()
+        };
+
+        return Ok(dto);
     }
 }

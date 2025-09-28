@@ -10,4 +10,5 @@ public interface IFrameEventQueue
     Task<FrameEvent?> PeekNextAsync(string deviceId, CancellationToken cancellationToken = default);
     Task<bool> AckAsync(string deviceId, string eventId, FrameEventAckStatus status, CancellationToken cancellationToken = default);
     Task<int> RemoveByCategoryAsync(string deviceId, string category, CancellationToken cancellationToken = default);
+    IReadOnlyList<(FrameEvent Event, FrameEventAckStatus? LastAckStatus)> GetDeviceSnapshot(string deviceId);
 }

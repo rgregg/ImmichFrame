@@ -31,7 +31,7 @@ public class InMemoryFrameEventQueue : IFrameEventQueue
         private readonly Dictionary<string, EventRecord> _eventsById = new();
         private readonly Dictionary<string, string> _categoryIndex = new();
         private readonly SortedSet<EventRecord> _priorityQueue = new(new EventComparer());
-        private readonly Dictionary<string, FrameEventAckStatus> _ackStatusById = new();
+        private readonly Dictionary<string, FrameEventAckStatus?> _ackStatusById = new();
 
         public string? ActiveEventId { get; set; }
 
@@ -65,7 +65,7 @@ public class InMemoryFrameEventQueue : IFrameEventQueue
                 _categoryIndex[record.Event.Category!] = record.Event.Id;
             }
 
-            _ackStatusById[record.Event.Id] = FrameEventAckStatus.Shown; // default state placeholder
+            _ackStatusById[record.Event.Id] = null;
         }
 
         public IEnumerable<EventRecord> RemoveByCategory(string category)
@@ -109,6 +109,7 @@ public class InMemoryFrameEventQueue : IFrameEventQueue
                 return true;
             }
 
+            _ackStatusById[eventId] = status;
             RemoveRecord(record);
             return true;
         }
@@ -143,6 +144,18 @@ public class InMemoryFrameEventQueue : IFrameEventQueue
             {
                 ActiveEventId = null;
             }
+        }
+
+        public IReadOnlyList<(FrameEvent Event, FrameEventAckStatus? LastAckStatus)> Snapshot()
+        {
+            RemoveExpired();
+            return _priorityQueue
+                .Select(record =>
+                {
+                    _ackStatusById.TryGetValue(record.Event.Id, out var status);
+                    return (record.Event, status);
+                })
+                .ToList();
         }
     }
 
@@ -238,6 +251,19 @@ public class InMemoryFrameEventQueue : IFrameEventQueue
         lock (queue)
         {
             return Task.FromResult(queue.RemoveByCategory(category).Count());
+        }
+    }
+
+    public IReadOnlyList<(FrameEvent Event, FrameEventAckStatus? LastAckStatus)> GetDeviceSnapshot(string deviceId)
+    {
+        if (!_queues.TryGetValue(deviceId, out var queue))
+        {
+            return Array.Empty<(FrameEvent, FrameEventAckStatus?)>();
+        }
+
+        lock (queue)
+        {
+            return queue.Snapshot();
         }
     }
 }

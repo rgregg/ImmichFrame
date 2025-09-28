@@ -222,3 +222,19 @@ avoids MQTT and iframe authoring overhead:
   can connect to the new endpoints.
 - **Future work**: MQTT/WebSocket delivery, iframe demo apps, telemetry,
   and digital signature verification remain post-MVP.
+
+### 14.1 Diagnostics & Tooling
+
+- **API endpoints**  
+  - `POST /api/events` – enqueue popup/cover/close events.  
+  - `GET /api/events/next?deviceId=<id>` – long-poll the highest-priority
+    event for a frame (host-side).  
+  - `POST /api/events/{eventId}/ack?deviceId=<id>` – report
+    `Shown|Closed|Timeout|Error`. Response echoes the status for logging.  
+  - `GET /api/events/pending?deviceId=<id>` – returns a diagnostics view of
+    pending events and their last acknowledged status.
+- **Logging**: Every acknowledgement is logged at Information level with the
+  device id, event id, and status.
+- **Demo iframe**: `static/demo/cover-demo.html` demonstrates the handshake
+  (`app:ready`, `frame:context`, `app:requestClose`, `app:resize`) and can be
+  loaded via `url="/demo/cover-demo.html"` for local testing.

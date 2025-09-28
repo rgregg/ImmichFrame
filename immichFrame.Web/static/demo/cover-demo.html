@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>ImmichFrame Cover Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root {
+        font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        color: #111;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        width: 100%;
+        background: #ffffff;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .app {
+        display: grid;
+        gap: 2rem;
+        padding: 3rem;
+        text-align: center;
+        max-width: min(90vw, 720px);
+      }
+
+      h1 {
+        font-size: clamp(2.5rem, 5vw, 4rem);
+        margin: 0;
+      }
+
+      p {
+        margin: 0;
+        font-size: 1.125rem;
+        color: #444;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 1rem;
+      }
+
+      button {
+        border: none;
+        border-radius: 999px;
+        padding: 0.85rem 1.8rem;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 120ms ease, box-shadow 120ms ease;
+      }
+
+      button.primary {
+        background: #111827;
+        color: #fff;
+      }
+
+      button.secondary {
+        background: #f3f4f6;
+        color: #111827;
+      }
+
+      button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
+      }
+
+      .status {
+        font-size: 0.95rem;
+        color: #6b7280;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <div>
+        <h1 id="title">Morning Briefing</h1>
+        <p id="subtitle">Loading device context…</p>
+      </div>
+      <div class="actions">
+        <button class="primary" id="close-btn">Dismiss</button>
+        <button class="secondary" id="resize-btn">Resize (Popup only)</button>
+      </div>
+      <p class="status" id="status">Waiting for ImmichFrame handshake…</p>
+    </div>
+
+    <script>
+      const statusEl = document.getElementById('status');
+      const subtitleEl = document.getElementById('subtitle');
+      const closeBtn = document.getElementById('close-btn');
+      const resizeBtn = document.getElementById('resize-btn');
+
+      function log(message) {
+        console.debug('[demo]', message);
+        statusEl.textContent = message;
+      }
+
+      window.parent.postMessage({ kind: 'app:ready' }, '*');
+      log('Sent app:ready');
+
+      window.addEventListener('message', (event) => {
+        if (!event.data || typeof event.data !== 'object') return;
+
+        switch (event.data.kind) {
+          case 'frame:hello':
+            log('Received frame:hello');
+            break;
+          case 'frame:context':
+            log('Received frame:context');
+            subtitleEl.textContent = `Device ${event.data.deviceId} • ${event.data.locale ?? 'locale unknown'}`;
+            break;
+          case 'frame:close':
+            log('Received frame:close – requesting close');
+            window.parent.postMessage({ kind: 'app:requestClose' }, '*');
+            break;
+          default:
+            break;
+        }
+      });
+
+      closeBtn.addEventListener('click', () => {
+        log('Close button clicked');
+        window.parent.postMessage({ kind: 'app:requestClose' }, '*');
+      });
+
+      resizeBtn.addEventListener('click', () => {
+        log('Requesting popup resize');
+        window.parent.postMessage({ kind: 'app:resize', height: 520 }, '*');
+      });
+    </script>
+  </body>
+</html>
