@@ -15,6 +15,15 @@
 	import { page } from '$app/state';
 	import { ProgressBarLocation, ProgressBarStatus } from '../elements/progress-bar.types';
 	import { isImageAsset, isVideoAsset } from '$lib/constants/asset-type';
+	import {
+		activeEvent,
+		acknowledgeEvent,
+		clearActiveEvent,
+		startEventPolling,
+		stopEventPolling
+	} from '$lib/events/event-service';
+	import type { FrameEvent, FrameEventAckStatus } from '$lib/events/event-service';
+	import EventOverlayHost from '$lib/components/events/EventOverlayHost.svelte';
 
 	interface AssetsState {
 		assets: [string, api.AssetResponseDto, api.AlbumResponseDto[]][];
@@ -73,6 +82,15 @@
 	let refreshInterval: number;
 
 	let cursorVisible = $state(true);
+	const deviceId = $derived.by(() => getCurrentDeviceId());
+	let pollingDeviceId: string | null = $state(null);
+	let hasMounted = $state(false);
+	let currentEvent: FrameEvent | null = $state(null);
+	let lastEventId: string | null = $state(null);
+	let eventTimeoutHandle: ReturnType<typeof setTimeout> | null = null;
+	let eventPausedSlideshow = $state(false);
+	let eventShownAcked = $state(false);
+	let unsubscribeActiveEvent: (() => void) | undefined;
 
 	const clientIdentifier = page.url.searchParams.get('client');
 	const authsecret = page.url.searchParams.get('authsecret');
@@ -85,6 +103,36 @@
 		authSecretStore.set(authsecret);
 		api.init();
 	}
+
+	function getCurrentDeviceId(): string {
+		const storeId = typeof $clientIdentifierStore === 'string' ? $clientIdentifierStore.trim() : '';
+		const queryId = typeof clientIdentifier === 'string' ? clientIdentifier.trim() : '';
+		return storeId || queryId || 'default';
+	}
+
+	$effect(() => {
+		if (!hasMounted) {
+			return;
+		}
+
+		const eventHostEnabled = $configStore.eventHostEnabled ?? false;
+		const id = deviceId;
+
+		if (!eventHostEnabled) {
+			stopEventPolling();
+			pollingDeviceId = null;
+			currentEvent = null;
+			return;
+		}
+
+		if (id && id !== pollingDeviceId) {
+			startEventPolling(id);
+			pollingDeviceId = id;
+		} else if (!id && pollingDeviceId) {
+			stopEventPolling();
+			pollingDeviceId = null;
+		}
+	});
 
 	const hideCursor = () => {
 		cursorVisible = false;
@@ -104,6 +152,93 @@
 		clearTimeout(timeoutId);
 		timeoutId = window.setTimeout(hideCursor, CURSOR_HIDE_MS);
 	};
+
+	function clearEventTimer() {
+		if (eventTimeoutHandle) {
+			clearTimeout(eventTimeoutHandle);
+			eventTimeoutHandle = null;
+		}
+	}
+
+	function markEventShownOnce() {
+		if (!($configStore.eventHostEnabled ?? false)) {
+			return;
+		}
+		if (!currentEvent || eventShownAcked || !deviceId) {
+			return;
+		}
+		eventShownAcked = true;
+		void acknowledgeEvent(deviceId, currentEvent.id, 'Shown');
+	}
+
+	async function dismissEvent(status: FrameEventAckStatus, explicitEvent: FrameEvent | null = null) {
+		if (!($configStore.eventHostEnabled ?? false)) {
+			return;
+		}
+		const target = explicitEvent ?? currentEvent;
+		if (!target) {
+			return;
+		}
+
+		clearEventTimer();
+		clearActiveEvent();
+		if (!deviceId) {
+			return;
+		}
+
+		try {
+			await acknowledgeEvent(deviceId, target.id, status);
+		} catch (error) {
+			console.error('failed to acknowledge frame event', error);
+		}
+	}
+
+	function handleActiveEvent(event: FrameEvent | null) {
+		if (!($configStore.eventHostEnabled ?? false)) {
+			currentEvent = null;
+			return;
+		}
+		clearEventTimer();
+
+		if (!event) {
+			currentEvent = null;
+			eventShownAcked = false;
+			lastEventId = null;
+			if (eventPausedSlideshow && progressBar) {
+				void progressBar.play();
+			}
+			eventPausedSlideshow = false;
+			return;
+		}
+
+		if (event.mode === 'Close') {
+			void dismissEvent('Closed', event);
+			return;
+		}
+
+		currentEvent = event;
+		const isNewEvent = event.id !== lastEventId;
+		if (isNewEvent) {
+			lastEventId = event.id;
+			eventShownAcked = false;
+			if (progressBar && progressBarStatus !== ProgressBarStatus.Paused) {
+				void progressBar.pause();
+				eventPausedSlideshow = true;
+			} else if (progressBarStatus === ProgressBarStatus.Paused) {
+				eventPausedSlideshow = false;
+			}
+		}
+
+		markEventShownOnce();
+
+		const fallbackTimeout = $configStore.eventDefaultTimeoutMs ?? 0;
+		const timeoutMs = event.timeoutMs ?? fallbackTimeout;
+		if (timeoutMs && timeoutMs > 0) {
+			eventTimeoutHandle = setTimeout(() => {
+				void dismissEvent('Timeout');
+			}, timeoutMs);
+		}
+	}
 
 	async function updateAssetPromises() {
 		for (let asset of displayingAssets) {
@@ -434,6 +569,8 @@
 	}
 
 	onMount(() => {
+		hasMounted = true;
+		unsubscribeActiveEvent = activeEvent.subscribe(handleActiveEvent);
 		window.addEventListener('mousemove', showCursor);
 		window.addEventListener('click', showCursor);
 
@@ -477,6 +614,13 @@
 			window.clearTimeout(timeoutId);
 			window.clearTimeout(videoStallTimeout);
 			window.clearTimeout(watchdogTimer);
+			if (unsubscribeActiveEvent) {
+				unsubscribeActiveEvent();
+				unsubscribeActiveEvent = undefined;
+			}
+			clearEventTimer();
+			stopEventPolling();
+			hasMounted = false;
 		};
 	});
 
@@ -488,6 +632,14 @@
 		if (unsubscribeStop) {
 			unsubscribeStop();
 		}
+
+		if (unsubscribeActiveEvent) {
+			unsubscribeActiveEvent();
+			unsubscribeActiveEvent = undefined;
+		}
+		clearEventTimer();
+		stopEventPolling();
+		hasMounted = false;
 
 		const revokes = Object.values(assetPromisesDict).map(async (p) => {
 			try {
@@ -568,6 +720,13 @@
 
 		<Appointments />
 
+		{#if $configStore.eventHostEnabled}
+			<EventOverlayHost
+				event={currentEvent}
+				dismiss={dismissEvent}
+			/>
+		{/if}
+
 		<OverlayControls
 			next={async () => {
 				await handleDone(false, true);
@@ -604,7 +763,7 @@
 			}}
 			bind:status={progressBarStatus}
 			bind:infoVisible
-			overlayVisible={cursorVisible}
+			overlayVisible={cursorVisible && !currentEvent}
 		/>
 
 		<ProgressBar
