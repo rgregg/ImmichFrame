@@ -1,6 +1,8 @@
 using ImmichFrame.Core.Helpers;
 using ImmichFrame.Core.Interfaces;
+using ImmichFrame.Core.Services;
 using ImmichFrame.WebApi.Models;
+using ImmichFrame.WebApi.Services;
 using Microsoft.AspNetCore.Authentication;
 using System.Reflection;
 using ImmichFrame.Core.Logic;
@@ -67,6 +69,8 @@ builder.Services.AddTransient<Func<IAccountSettings, IAccountImmichFrameLogic>>(
     account => ActivatorUtilities.CreateInstance<PooledImmichFrameLogic>(srv, account));
 
 builder.Services.AddSingleton<IImmichFrameLogic, MultiImmichFrameLogicDelegate>();
+builder.Services.AddSingleton<IFrameEventQueue, InMemoryFrameEventQueue>();
+builder.Services.AddSingleton<FrameEventValidator>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
