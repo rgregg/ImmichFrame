@@ -72,6 +72,9 @@ public class GeneralSettings : IGeneralSettings, IConfigSettable
     public string? WeatherLatLong { get; set; } = "40.7128,74.0060";
     public string? Webhook { get; set; }
     public string? AuthenticationSecret { get; set; }
+    public bool EventHostEnabled { get; set; } = false;
+    public int EventPollingIntervalSeconds { get; set; } = 2;
+    public int EventDefaultTimeoutMs { get; set; } = 15000;
 
     public void Validate() { }
 }

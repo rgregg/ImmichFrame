@@ -32,6 +32,9 @@ public class ClientSettingsDto
     public bool PlayAudio { get; set; }
     public string Layout { get; set; }
     public string Language { get; set; }
+    public bool EventHostEnabled { get; set; }
+    public int EventPollingIntervalSeconds { get; set; }
+    public int EventDefaultTimeoutMs { get; set; }
 
     public static ClientSettingsDto FromGeneralSettings(IGeneralSettings generalSettings)
     {
@@ -64,6 +67,9 @@ public class ClientSettingsDto
         dto.PlayAudio = generalSettings.PlayAudio;
         dto.Layout = generalSettings.Layout;
         dto.Language = generalSettings.Language;
+        dto.EventHostEnabled = generalSettings.EventHostEnabled;
+        dto.EventPollingIntervalSeconds = generalSettings.EventPollingIntervalSeconds;
+        dto.EventDefaultTimeoutMs = generalSettings.EventDefaultTimeoutMs;
         return dto;
     }
 }

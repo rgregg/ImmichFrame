@@ -56,6 +56,9 @@ public class ServerSettingsV1 : IConfigSettable
     public bool ImageFill { get; set; } = false;
     public bool PlayAudio { get; set; } = false;
     public string Layout { get; set; } = "splitview";
+    public bool EventHostEnabled { get; set; } = false;
+    public int EventPollingIntervalSeconds { get; set; } = 2;
+    public int EventDefaultTimeoutMs { get; set; } = 15000;
 }
 
 /// <summary>
@@ -135,6 +138,9 @@ public class ServerSettingsV1Adapter(ServerSettingsV1 _delegate) : IServerSettin
         public bool PlayAudio => _delegate.PlayAudio;
         public string Layout => _delegate.Layout;
         public string Language => _delegate.Language;
+        public bool EventHostEnabled => _delegate.EventHostEnabled;
+        public int EventPollingIntervalSeconds => _delegate.EventPollingIntervalSeconds;
+        public int EventDefaultTimeoutMs => _delegate.EventDefaultTimeoutMs;
 
         public void Validate() { }
     }
