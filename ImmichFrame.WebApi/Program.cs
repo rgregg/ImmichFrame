@@ -73,11 +73,7 @@ builder.Services.AddSingleton<IImmichFrameLogic, MultiImmichFrameLogicDelegate>(
 builder.Services.AddSingleton<IFrameEventQueue, InMemoryFrameEventQueue>();
 builder.Services.AddSingleton<FrameEventValidator>();
 
-builder.Services.AddControllers()
-    .AddJsonOptions(options =>
-    {
-        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-    });
+builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
