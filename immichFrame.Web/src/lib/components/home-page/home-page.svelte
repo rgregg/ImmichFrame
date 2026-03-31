@@ -110,29 +110,7 @@
 		return storeId || queryId || 'default';
 	}
 
-	$effect(() => {
-		if (!hasMounted) {
-			return;
-		}
-
-		const eventHostEnabled = $configStore.eventHostEnabled ?? false;
-		const id = deviceId;
-
-		if (!eventHostEnabled) {
-			stopEventPolling();
-			pollingDeviceId = null;
-			currentEvent = null;
-			return;
-		}
-
-		if (id && id !== pollingDeviceId) {
-			startEventPolling(id);
-			pollingDeviceId = id;
-		} else if (!id && pollingDeviceId) {
-			stopEventPolling();
-			pollingDeviceId = null;
-		}
-	});
+	// Event polling is started in onMount after config is loaded
 
 	const hideCursor = () => {
 		cursorVisible = false;
@@ -571,6 +549,14 @@
 	onMount(() => {
 		hasMounted = true;
 		unsubscribeActiveEvent = activeEvent.subscribe(handleActiveEvent);
+
+		// Start event polling unconditionally — startEventPolling checks eventHostEnabled internally.
+		const id = getCurrentDeviceId();
+		if (id) {
+			startEventPolling(id);
+			pollingDeviceId = id;
+		}
+
 		window.addEventListener('mousemove', showCursor);
 		window.addEventListener('click', showCursor);
 

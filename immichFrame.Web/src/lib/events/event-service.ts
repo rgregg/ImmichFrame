@@ -44,11 +44,6 @@ export function clearActiveEvent() {
 let pollingController: AbortController | null = null;
 
 export function startEventPolling(deviceId: string) {
-  const settings = get(configStore);
-  if (!settings.eventHostEnabled) {
-    activeEventStore.set(null);
-    return;
-  }
   stopEventPolling();
   pollingController = new AbortController();
   void pollLoop(deviceId, pollingController);
