@@ -8,6 +8,7 @@ using System.Reflection;
 using ImmichFrame.Core.Logic;
 using ImmichFrame.Core.Logic.AccountSelection;
 using ImmichFrame.WebApi.Helpers.Config;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 //log the version number
@@ -72,7 +73,11 @@ builder.Services.AddSingleton<IImmichFrameLogic, MultiImmichFrameLogicDelegate>(
 builder.Services.AddSingleton<IFrameEventQueue, InMemoryFrameEventQueue>();
 builder.Services.AddSingleton<FrameEventValidator>();
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
