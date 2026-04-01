@@ -2,8 +2,10 @@
 	import type { FrameEvent, FrameEventAckStatus } from '$lib/events/event-service';
 	import PopupTextOverlay from './PopupTextOverlay.svelte';
 
-	export let event: FrameEvent | null = null;
-	export let dismiss: (status: FrameEventAckStatus) => void | Promise<void>;
+	let { event = null, dismiss }: {
+		event: FrameEvent | null;
+		dismiss: (status: FrameEventAckStatus) => void | Promise<void>;
+	} = $props();
 </script>
 
 {#if event}
