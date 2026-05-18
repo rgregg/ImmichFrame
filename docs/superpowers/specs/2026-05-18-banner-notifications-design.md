@@ -5,7 +5,7 @@ Branch: `rgregg-notification-ux` (extends the in-flight PopupText event work)
 
 ## Summary
 
-Add a second notification mode, `Banner`, to ImmichFrame's frame-event system. Banners are passive top-of-screen messages that do not pause the slideshow, can coexist with a `PopupText` popup, and auto-dismiss after the standard event timeout. They share the same event API, validator, queue, and ack flow — distinguished only by `FrameEventMode` and renderered by a new overlay component.
+Add a second notification mode, `Banner`, to ImmichFrame's frame-event system. Banners are passive top-of-screen messages that do not pause the slideshow, can coexist with a `PopupText` popup, and auto-dismiss after the standard event timeout. They share the same event API, validator, queue, and ack flow — distinguished only by `FrameEventMode` and rendered by a new overlay component.
 
 ## Goals / non-goals
 

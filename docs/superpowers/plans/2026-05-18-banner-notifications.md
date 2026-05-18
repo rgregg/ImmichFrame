@@ -1172,11 +1172,11 @@ docker buildx build --builder multiarch --platform linux/arm64 \
 
 Expected: build succeeds, push completes.
 
-- [ ] **Step 3: Pull and restart on hass-hub-01**
+- [ ] **Step 3: Pull and restart on the kiosk host**
 
 ```bash
-ssh hass-hub-01.lan 'sudo -n docker pull ghcr.io/rgregg/immichframe:notification-ux && \
-  cd /opt/stacks && sudo -n docker compose up -d --force-recreate immichframe'
+ssh <kiosk-host> 'sudo -n docker pull ghcr.io/rgregg/immichframe:notification-ux && \
+  cd <compose-dir> && sudo -n docker compose up -d --force-recreate immichframe'
 ```
 
 Expected: container recreates, comes up healthy.
@@ -1186,17 +1186,17 @@ Expected: container recreates, comes up healthy.
 Reload the kiosk page so it fetches the new frontend bundle:
 
 ```bash
-ssh hass-hub-01.lan 'systemctl --user restart immich-frame'
+ssh <kiosk-host> 'systemctl --user restart immich-frame'
 ```
 
-(If the kiosk isn't a transient systemd-run unit yet, fall back to `pkill chromium` + `DISPLAY=:0 XAUTHORITY=/home/ryan/.Xauthority setsid -f ~/.local/bin/frame.sh`.)
+(If the kiosk isn't a transient systemd-run unit yet, fall back to `pkill chromium` + `DISPLAY=:0 XAUTHORITY=~/.Xauthority setsid -f ~/.local/bin/frame.sh`.)
 
 - [ ] **Step 5: Send a test banner and a test popup**
 
 Get the kiosk's deviceId from devtools (port 9222 → query localStorage), then:
 
 ```bash
-ssh hass-hub-01.lan 'DEV=<device-id>
+ssh <kiosk-host> 'DEV=<device-id>
 curl -sS -X POST http://localhost:8080/api/events \
   -H "Content-Type: application/json" \
   -d "{\"deviceId\":\"$DEV\",\"id\":\"banner-test-$(date +%s)\",\"type\":\"frame.ui.banner\",\"mode\":\"Banner\",\"message\":\"Banner test — should NOT pause slideshow\",\"category\":\"banner\",\"timeoutMs\":10000}"

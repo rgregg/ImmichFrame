@@ -208,6 +208,10 @@ curl -X POST http://<your-host>:8080/api/events \
 
 Both modes share the same `POST /api/events` schema; only `mode` differs.
 
+:::note
+If you have `AuthenticationSecret` set in your Settings, include `Authorization: Bearer <your-secret>` as a request header — without it the request will be rejected as unauthenticated.
+:::
+
 #### Events
 Events will always contain a `Name`, `ClientIdentifier` and a `DateTime` to differentiate, but can contain more information.
 
