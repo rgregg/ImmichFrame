@@ -48,6 +48,12 @@ public class FrameEventValidatorTests
     }
 
     [Test]
+    public void Validate_NullDto_Throws()
+    {
+        Assert.Throws<ValidationException>(() => _validator.Validate(null!));
+    }
+
+    [Test]
     public void Validate_Succeeds_ForValidPopupText()
     {
         var result = _validator.Validate(MakeValidPopupText());

@@ -56,7 +56,7 @@ public class InMemoryFrameEventQueue : IFrameEventQueue
         private readonly object _lock = new();
         private readonly SortedSet<EventEntry> _entries = new(EventEntryComparer.Instance);
         private readonly Dictionary<string, EventEntry> _byId = new();
-        private readonly Dictionary<string, EventEntry> _byCategory = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<(FrameEventMode Mode, string Category), EventEntry> _byCategory = new();
         private readonly Dictionary<FrameEventMode, string> _activeEventIdByMode = new();
 
         public bool Enqueue(FrameEvent frameEvent)
@@ -75,10 +75,11 @@ public class InMemoryFrameEventQueue : IFrameEventQueue
                 if (_byId.ContainsKey(frameEvent.Id))
                     return false;
 
-                if (!string.IsNullOrWhiteSpace(frameEvent.Category) &&
-                    _byCategory.TryGetValue(frameEvent.Category, out var existing))
+                if (!string.IsNullOrWhiteSpace(frameEvent.Category))
                 {
-                    Remove(existing);
+                    var key = (frameEvent.Mode, frameEvent.Category.ToLowerInvariant());
+                    if (_byCategory.TryGetValue(key, out var existing))
+                        Remove(existing);
                 }
 
                 var entry = new EventEntry(frameEvent);
@@ -86,7 +87,7 @@ public class InMemoryFrameEventQueue : IFrameEventQueue
                 _byId[frameEvent.Id] = entry;
 
                 if (!string.IsNullOrWhiteSpace(frameEvent.Category))
-                    _byCategory[frameEvent.Category] = entry;
+                    _byCategory[(frameEvent.Mode, frameEvent.Category.ToLowerInvariant())] = entry;
 
                 return true;
             }
@@ -170,7 +171,7 @@ public class InMemoryFrameEventQueue : IFrameEventQueue
             _entries.Remove(entry);
             _byId.Remove(entry.Event.Id);
             if (!string.IsNullOrWhiteSpace(entry.Event.Category))
-                _byCategory.Remove(entry.Event.Category);
+                _byCategory.Remove((entry.Event.Mode, entry.Event.Category.ToLowerInvariant()));
         }
 
         private void Clear()

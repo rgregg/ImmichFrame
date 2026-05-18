@@ -8,5 +8,6 @@ public enum FrameEventAckStatus
     Shown,
     Closed,
     Timeout,
-    Error
+    Error,
+    Dismissed
 }

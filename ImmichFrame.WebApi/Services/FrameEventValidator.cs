@@ -18,6 +18,9 @@ public class FrameEventValidator
 
     public FrameEvent Validate(FrameEventRequestDto dto)
     {
+        if (dto is null)
+            throw new ValidationException("request body is required");
+
         if (string.IsNullOrWhiteSpace(dto.DeviceId))
             throw new ValidationException("deviceId is required");
 

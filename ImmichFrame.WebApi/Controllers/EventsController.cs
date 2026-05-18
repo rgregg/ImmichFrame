@@ -43,7 +43,7 @@ public class EventsController : ControllerBase
         }
         catch (ValidationException vex)
         {
-            _logger.LogWarning(vex, "Invalid frame event received with id {EventId}", request?.Id);
+            _logger.LogWarning(vex, "Invalid frame event received with id {EventId}", Sanitize(request?.Id));
             return BadRequest(new { message = vex.Message });
         }
     }
@@ -71,17 +71,23 @@ public class EventsController : ControllerBase
         if (string.IsNullOrWhiteSpace(deviceId))
             return BadRequest(new { message = "deviceId is required" });
 
+        if (request is null || request.Status is null)
+            return BadRequest(new { message = "status is required" });
+
         if (!_settings.EventHostEnabled)
             return NotFound(new { message = "Event host is disabled" });
 
-        var removed = await _queue.AckAsync(deviceId, eventId, request.Status, cancellationToken);
+        var removed = await _queue.AckAsync(deviceId, eventId, request.Status.Value, cancellationToken);
 
         if (!removed)
             return NotFound();
 
-        _logger.LogInformation("Acked event {EventId} for {DeviceId} with status {Status}", eventId, deviceId, request.Status);
-        return Ok(new { eventId, deviceId, status = request.Status.ToString() });
+        _logger.LogInformation("Acked event {EventId} for {DeviceId} with status {Status}", Sanitize(eventId), Sanitize(deviceId), request.Status);
+        return Ok(new { eventId, deviceId, status = request.Status.Value.ToString() });
     }
+
+    private static string Sanitize(string? value)
+        => value is null ? "" : value.Replace("\r", "").Replace("\n", "");
 
     [HttpGet("pending")]
     public IActionResult GetPending([FromQuery] string deviceId)

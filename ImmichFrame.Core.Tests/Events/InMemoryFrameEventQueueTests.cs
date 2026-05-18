@@ -209,6 +209,32 @@ public class InMemoryFrameEventQueueTests
     }
 
     [Test]
+    public async Task Enqueue_BannerWithCategory_DoesNotEvictPopupWithSameCategory()
+    {
+        await _queue.EnqueueAsync(MakeEvent(FrameEventMode.PopupText, "popup-1", category: "shared"));
+        await _queue.EnqueueAsync(MakeEvent(FrameEventMode.Banner, "banner-1", category: "shared"));
+
+        var popup = await _queue.PeekNextAsync("device-1", FrameEventMode.PopupText);
+        var banner = await _queue.PeekNextAsync("device-1", FrameEventMode.Banner);
+
+        Assert.That(popup, Is.Not.Null);
+        Assert.That(popup!.Id, Is.EqualTo("popup-1"));
+        Assert.That(banner, Is.Not.Null);
+        Assert.That(banner!.Id, Is.EqualTo("banner-1"));
+    }
+
+    [Test]
+    public async Task Enqueue_BannerWithCategory_ReplacesOlderBannerWithSameCategory()
+    {
+        await _queue.EnqueueAsync(MakeEvent(FrameEventMode.Banner, "banner-old", category: "shared"));
+        await _queue.EnqueueAsync(MakeEvent(FrameEventMode.Banner, "banner-new", category: "shared"));
+
+        var snapshot = _queue.GetDeviceSnapshot("device-1");
+        Assert.That(snapshot.Count, Is.EqualTo(1));
+        Assert.That(snapshot[0].Event.Id, Is.EqualTo("banner-new"));
+    }
+
+    [Test]
     public async Task PeekNext_NoModeFilter_ReturnsHighestPriorityRegardlessOfMode()
     {
         // The EventEntryComparer sorts ascending by priority (lower numeric value = higher effective priority).

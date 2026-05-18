@@ -6,5 +6,5 @@ namespace ImmichFrame.WebApi.Models.Events;
 public class FrameEventAckRequestDto
 {
     [Required]
-    public FrameEventAckStatus Status { get; set; }
+    public FrameEventAckStatus? Status { get; set; }
 }
