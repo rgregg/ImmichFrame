@@ -16,9 +16,11 @@
 	import { ProgressBarLocation, ProgressBarStatus } from '../elements/progress-bar.types';
 	import { isImageAsset, isVideoAsset } from '$lib/constants/asset-type';
 	import {
-		activeEvent,
+		activePopupEvent,
+		activeBannerEvent,
 		acknowledgeEvent,
-		clearActiveEvent,
+		clearActivePopupEvent,
+		clearActiveBannerEvent,
 		startEventPolling,
 		stopEventPolling
 	} from '$lib/events/event-service';
@@ -85,12 +87,17 @@
 	const deviceId = $derived.by(() => getCurrentDeviceId());
 	let pollingDeviceId: string | null = $state(null);
 	let hasMounted = $state(false);
-	let currentEvent: FrameEvent | null = $state(null);
-	let lastEventId: string | null = $state(null);
-	let eventTimeoutHandle: ReturnType<typeof setTimeout> | null = null;
-	let eventPausedSlideshow = $state(false);
-	let eventShownAcked = $state(false);
-	let unsubscribeActiveEvent: (() => void) | undefined;
+	let currentPopup: FrameEvent | null = $state(null);
+	let currentBanner: FrameEvent | null = $state(null);
+	let lastPopupId: string | null = $state(null);
+	let lastBannerId: string | null = $state(null);
+	let popupTimeoutHandle: ReturnType<typeof setTimeout> | null = null;
+	let bannerTimeoutHandle: ReturnType<typeof setTimeout> | null = null;
+	let popupPausedSlideshow = $state(false);
+	let popupShownAcked = $state(false);
+	let bannerShownAcked = $state(false);
+	let unsubscribePopupEvent: (() => void) | undefined;
+	let unsubscribeBannerEvent: (() => void) | undefined;
 
 	const clientIdentifier = page.url.searchParams.get('client');
 	const authsecret = page.url.searchParams.get('authsecret');
@@ -131,89 +138,147 @@
 		timeoutId = window.setTimeout(hideCursor, CURSOR_HIDE_MS);
 	};
 
-	function clearEventTimer() {
-		if (eventTimeoutHandle) {
-			clearTimeout(eventTimeoutHandle);
-			eventTimeoutHandle = null;
+	function clearPopupTimer() {
+		if (popupTimeoutHandle) {
+			clearTimeout(popupTimeoutHandle);
+			popupTimeoutHandle = null;
 		}
 	}
 
-	function markEventShownOnce() {
-		if (!($configStore.eventHostEnabled ?? false)) {
-			return;
+	function clearBannerTimer() {
+		if (bannerTimeoutHandle) {
+			clearTimeout(bannerTimeoutHandle);
+			bannerTimeoutHandle = null;
 		}
-		if (!currentEvent || eventShownAcked || !deviceId) {
-			return;
-		}
-		eventShownAcked = true;
-		void acknowledgeEvent(deviceId, currentEvent.id, 'Shown');
 	}
 
-	async function dismissEvent(status: FrameEventAckStatus, explicitEvent: FrameEvent | null = null) {
-		if (!($configStore.eventHostEnabled ?? false)) {
-			return;
-		}
-		const target = explicitEvent ?? currentEvent;
-		if (!target) {
-			return;
-		}
+	function markPopupShownOnce() {
+		if (!($configStore.eventHostEnabled ?? false)) return;
+		if (!currentPopup || popupShownAcked || !deviceId) return;
+		popupShownAcked = true;
+		void acknowledgeEvent(deviceId, currentPopup.id, 'Shown');
+	}
 
-		clearEventTimer();
-		clearActiveEvent();
-		if (!deviceId) {
-			return;
-		}
+	function markBannerShownOnce() {
+		if (!($configStore.eventHostEnabled ?? false)) return;
+		if (!currentBanner || bannerShownAcked || !deviceId) return;
+		bannerShownAcked = true;
+		void acknowledgeEvent(deviceId, currentBanner.id, 'Shown');
+	}
+
+	async function dismissPopup(status: FrameEventAckStatus, explicitEvent: FrameEvent | null = null) {
+		if (!($configStore.eventHostEnabled ?? false)) return;
+		const target = explicitEvent ?? currentPopup;
+		if (!target) return;
+
+		clearPopupTimer();
+		clearActivePopupEvent();
+		if (!deviceId) return;
 
 		try {
 			await acknowledgeEvent(deviceId, target.id, status);
 		} catch (error) {
-			console.error('failed to acknowledge frame event', error);
+			console.error('failed to acknowledge popup event', error);
 		}
 	}
 
-	function handleActiveEvent(event: FrameEvent | null) {
+	async function dismissBanner(status: FrameEventAckStatus, explicitEvent: FrameEvent | null = null) {
+		if (!($configStore.eventHostEnabled ?? false)) return;
+		const target = explicitEvent ?? currentBanner;
+		if (!target) return;
+
+		clearBannerTimer();
+		clearActiveBannerEvent();
+		if (!deviceId) return;
+
+		try {
+			await acknowledgeEvent(deviceId, target.id, status);
+		} catch (error) {
+			console.error('failed to acknowledge banner event', error);
+		}
+	}
+
+	function handlePopupEvent(event: FrameEvent | null) {
 		if (!($configStore.eventHostEnabled ?? false)) {
-			currentEvent = null;
+			currentPopup = null;
 			return;
 		}
-		clearEventTimer();
+		clearPopupTimer();
 
 		if (!event) {
-			currentEvent = null;
-			eventShownAcked = false;
-			lastEventId = null;
-			if (eventPausedSlideshow && progressBar) {
+			currentPopup = null;
+			popupShownAcked = false;
+			lastPopupId = null;
+			if (popupPausedSlideshow && progressBar) {
 				void progressBar.play();
 			}
-			eventPausedSlideshow = false;
+			popupPausedSlideshow = false;
 			return;
 		}
 
 		if (event.mode === 'Close') {
-			void dismissEvent('Closed', event);
+			void dismissPopup('Closed', event);
 			return;
 		}
 
-		currentEvent = event;
-		const isNewEvent = event.id !== lastEventId;
+		currentPopup = event;
+		const isNewEvent = event.id !== lastPopupId;
 		if (isNewEvent) {
-			lastEventId = event.id;
-			eventShownAcked = false;
+			lastPopupId = event.id;
+			popupShownAcked = false;
 			if (progressBar && progressBarStatus !== ProgressBarStatus.Paused) {
 				void progressBar.pause();
-				eventPausedSlideshow = true;
+				popupPausedSlideshow = true;
 			} else if (progressBarStatus === ProgressBarStatus.Paused) {
-				eventPausedSlideshow = false;
+				popupPausedSlideshow = false;
 			}
 		}
 
-		markEventShownOnce();
+		markPopupShownOnce();
 
 		const fallbackTimeout = $configStore.eventDefaultTimeoutMs ?? 0;
 		const timeoutMs = event.timeoutMs ?? fallbackTimeout;
 		if (timeoutMs && timeoutMs > 0) {
-			eventTimeoutHandle = setTimeout(() => {
-				void dismissEvent('Timeout');
+			popupTimeoutHandle = setTimeout(() => {
+				void dismissPopup('Timeout');
+			}, timeoutMs);
+		}
+	}
+
+	function handleBannerEvent(event: FrameEvent | null) {
+		if (!($configStore.eventHostEnabled ?? false)) {
+			currentBanner = null;
+			return;
+		}
+		clearBannerTimer();
+
+		if (!event) {
+			currentBanner = null;
+			bannerShownAcked = false;
+			lastBannerId = null;
+			return;
+		}
+
+		if (event.mode === 'Close') {
+			void dismissBanner('Closed', event);
+			return;
+		}
+
+		currentBanner = event;
+		const isNewEvent = event.id !== lastBannerId;
+		if (isNewEvent) {
+			lastBannerId = event.id;
+			bannerShownAcked = false;
+			// Banners never pause the slideshow.
+		}
+
+		markBannerShownOnce();
+
+		const fallbackTimeout = $configStore.eventDefaultTimeoutMs ?? 0;
+		const timeoutMs = event.timeoutMs ?? fallbackTimeout;
+		if (timeoutMs && timeoutMs > 0) {
+			bannerTimeoutHandle = setTimeout(() => {
+				void dismissBanner('Timeout');
 			}, timeoutMs);
 		}
 	}
@@ -548,7 +613,8 @@
 
 	onMount(() => {
 		hasMounted = true;
-		unsubscribeActiveEvent = activeEvent.subscribe(handleActiveEvent);
+		unsubscribePopupEvent = activePopupEvent.subscribe(handlePopupEvent);
+		unsubscribeBannerEvent = activeBannerEvent.subscribe(handleBannerEvent);
 
 		// Start event polling unconditionally — startEventPolling checks eventHostEnabled internally.
 		const id = getCurrentDeviceId();
@@ -600,11 +666,16 @@
 			window.clearTimeout(timeoutId);
 			window.clearTimeout(videoStallTimeout);
 			window.clearTimeout(watchdogTimer);
-			if (unsubscribeActiveEvent) {
-				unsubscribeActiveEvent();
-				unsubscribeActiveEvent = undefined;
+			if (unsubscribePopupEvent) {
+				unsubscribePopupEvent();
+				unsubscribePopupEvent = undefined;
 			}
-			clearEventTimer();
+			if (unsubscribeBannerEvent) {
+				unsubscribeBannerEvent();
+				unsubscribeBannerEvent = undefined;
+			}
+			clearPopupTimer();
+			clearBannerTimer();
 			stopEventPolling();
 			hasMounted = false;
 		};
@@ -619,11 +690,16 @@
 			unsubscribeStop();
 		}
 
-		if (unsubscribeActiveEvent) {
-			unsubscribeActiveEvent();
-			unsubscribeActiveEvent = undefined;
+		if (unsubscribePopupEvent) {
+			unsubscribePopupEvent();
+			unsubscribePopupEvent = undefined;
 		}
-		clearEventTimer();
+		if (unsubscribeBannerEvent) {
+			unsubscribeBannerEvent();
+			unsubscribeBannerEvent = undefined;
+		}
+		clearPopupTimer();
+		clearBannerTimer();
 		stopEventPolling();
 		hasMounted = false;
 
@@ -708,8 +784,10 @@
 
 		{#if $configStore.eventHostEnabled}
 			<EventOverlayHost
-				event={currentEvent}
-				dismiss={dismissEvent}
+				popupEvent={currentPopup}
+				bannerEvent={currentBanner}
+				dismissPopup={dismissPopup}
+				dismissBanner={dismissBanner}
 			/>
 		{/if}
 
@@ -749,7 +827,7 @@
 			}}
 			bind:status={progressBarStatus}
 			bind:infoVisible
-			overlayVisible={cursorVisible && !currentEvent}
+			overlayVisible={cursorVisible && !currentPopup}
 		/>
 
 		<ProgressBar

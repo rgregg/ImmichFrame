@@ -1,9 +1,9 @@
 import { get, writable } from 'svelte/store';
 import { configStore } from '$lib/stores/config.store';
 
-export type FrameEventMode = 'PopupText' | 'Close';
+export type FrameEventMode = 'PopupText' | 'Close' | 'Banner';
 
-export type FrameEventAckStatus = 'Shown' | 'Closed' | 'Timeout' | 'Error';
+export type FrameEventAckStatus = 'Shown' | 'Closed' | 'Timeout' | 'Error' | 'Dismissed';
 
 export interface FrameEventAction {
   id: string;
@@ -31,14 +31,23 @@ export interface FrameEvent {
   postedAt: string;
 }
 
-const activeEventStore = writable<FrameEvent | null>(null);
+const activePopupStore = writable<FrameEvent | null>(null);
+const activeBannerStore = writable<FrameEvent | null>(null);
 
-export const activeEvent = {
-  subscribe: activeEventStore.subscribe
+export const activePopupEvent = {
+  subscribe: activePopupStore.subscribe
 };
 
-export function clearActiveEvent() {
-  activeEventStore.set(null);
+export const activeBannerEvent = {
+  subscribe: activeBannerStore.subscribe
+};
+
+export function clearActivePopupEvent() {
+  activePopupStore.set(null);
+}
+
+export function clearActiveBannerEvent() {
+  activeBannerStore.set(null);
 }
 
 let pollingController: AbortController | null = null;
@@ -60,30 +69,41 @@ async function pollLoop(deviceId: string, controller: AbortController) {
 
   while (!controller.signal.aborted) {
     if (!get(configStore).eventHostEnabled) {
-      activeEventStore.set(null);
+      activePopupStore.set(null);
+      activeBannerStore.set(null);
       await delay(intervalMs, controller.signal);
       continue;
     }
 
-    try {
-      const response = await fetch(`/api/events/next?deviceId=${encodeURIComponent(deviceId)}`, {
-        method: 'GET',
-        signal: controller.signal
-      });
-
-      if (response.status === 200) {
-        const payload = (await response.json()) as FrameEvent;
-        activeEventStore.set(payload);
-      } else if (response.status === 204) {
-        activeEventStore.set(null);
-      }
-    } catch (error) {
-      if ((error as Error).name !== 'AbortError') {
-        console.error('event poll failed', error);
-      }
-    }
+    await Promise.all([
+      pollOne(deviceId, 'PopupText', activePopupStore, controller.signal),
+      pollOne(deviceId, 'Banner', activeBannerStore, controller.signal)
+    ]);
 
     await delay(intervalMs, controller.signal);
+  }
+}
+
+async function pollOne(
+  deviceId: string,
+  mode: FrameEventMode,
+  store: typeof activePopupStore,
+  signal: AbortSignal
+) {
+  try {
+    const url = `/api/events/next?deviceId=${encodeURIComponent(deviceId)}&mode=${mode}`;
+    const response = await fetch(url, { method: 'GET', signal });
+
+    if (response.status === 200) {
+      const payload = (await response.json()) as FrameEvent;
+      store.set(payload);
+    } else if (response.status === 204) {
+      store.set(null);
+    }
+  } catch (error) {
+    if ((error as Error).name !== 'AbortError') {
+      console.error(`event poll failed (mode=${mode})`, error);
+    }
   }
 }
 
