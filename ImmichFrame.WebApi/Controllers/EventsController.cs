@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using ImmichFrame.Core.Events;
 using ImmichFrame.Core.Interfaces;
 using ImmichFrame.WebApi.Models.Events;
 using ImmichFrame.WebApi.Services;
@@ -48,7 +49,7 @@ public class EventsController : ControllerBase
     }
 
     [HttpGet("next")]
-    public async Task<IActionResult> GetNext([FromQuery] string deviceId, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetNext([FromQuery] string deviceId, [FromQuery] FrameEventMode? mode, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(deviceId))
             return BadRequest(new { message = "deviceId is required" });
@@ -56,7 +57,7 @@ public class EventsController : ControllerBase
         if (!_settings.EventHostEnabled)
             return NotFound(new { message = "Event host is disabled" });
 
-        var frameEvent = await _queue.PeekNextAsync(deviceId, cancellationToken: cancellationToken);
+        var frameEvent = await _queue.PeekNextAsync(deviceId, mode, cancellationToken);
 
         if (frameEvent is null)
             return NoContent();
