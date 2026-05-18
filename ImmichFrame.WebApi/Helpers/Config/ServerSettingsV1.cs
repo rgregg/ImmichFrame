@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using ImmichFrame.Core.Interfaces;
 
 namespace ImmichFrame.WebApi.Helpers;
@@ -57,7 +58,9 @@ public class ServerSettingsV1 : IConfigSettable
     public bool PlayAudio { get; set; } = false;
     public string Layout { get; set; } = "splitview";
     public bool EventHostEnabled { get; set; } = false;
+    [Range(1, 3600)]
     public int EventPollingIntervalSeconds { get; set; } = 2;
+    [Range(100, 300_000)]
     public int EventDefaultTimeoutMs { get; set; } = 15000;
 }
 

@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using ImmichFrame.Core.Interfaces;
 using ImmichFrame.WebApi.Helpers;
 using YamlDotNet.Serialization;
@@ -73,7 +74,9 @@ public class GeneralSettings : IGeneralSettings, IConfigSettable
     public string? Webhook { get; set; }
     public string? AuthenticationSecret { get; set; }
     public bool EventHostEnabled { get; set; } = false;
+    [Range(1, 3600)]
     public int EventPollingIntervalSeconds { get; set; } = 2;
+    [Range(100, 300_000)]
     public int EventDefaultTimeoutMs { get; set; } = 15000;
 
     public void Validate() { }
