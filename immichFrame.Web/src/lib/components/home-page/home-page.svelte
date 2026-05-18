@@ -198,21 +198,26 @@
 		}
 	}
 
+	function resetPopupState() {
+		clearPopupTimer();
+		currentPopup = null;
+		popupShownAcked = false;
+		lastPopupId = null;
+		if (popupPausedSlideshow && progressBar) {
+			void progressBar.play();
+		}
+		popupPausedSlideshow = false;
+	}
+
 	function handlePopupEvent(event: FrameEvent | null) {
 		if (!($configStore.eventHostEnabled ?? false)) {
-			currentPopup = null;
+			resetPopupState();
 			return;
 		}
 		clearPopupTimer();
 
 		if (!event) {
-			currentPopup = null;
-			popupShownAcked = false;
-			lastPopupId = null;
-			if (popupPausedSlideshow && progressBar) {
-				void progressBar.play();
-			}
-			popupPausedSlideshow = false;
+			resetPopupState();
 			return;
 		}
 
@@ -245,17 +250,22 @@
 		}
 	}
 
+	function resetBannerState() {
+		clearBannerTimer();
+		currentBanner = null;
+		bannerShownAcked = false;
+		lastBannerId = null;
+	}
+
 	function handleBannerEvent(event: FrameEvent | null) {
 		if (!($configStore.eventHostEnabled ?? false)) {
-			currentBanner = null;
+			resetBannerState();
 			return;
 		}
 		clearBannerTimer();
 
 		if (!event) {
-			currentBanner = null;
-			bannerShownAcked = false;
-			lastBannerId = null;
+			resetBannerState();
 			return;
 		}
 

@@ -99,6 +99,8 @@ async function pollOne(
       store.set(payload);
     } else if (response.status === 204) {
       store.set(null);
+    } else if (!response.ok) {
+      console.error(`event poll failed (mode=${mode}): HTTP ${response.status} ${response.statusText}`);
     }
   } catch (error) {
     if ((error as Error).name !== 'AbortError') {
@@ -112,11 +114,14 @@ export async function acknowledgeEvent(deviceId: string, eventId: string, status
     return;
   }
   try {
-    await fetch(`/api/events/${encodeURIComponent(eventId)}/ack?deviceId=${encodeURIComponent(deviceId)}`, {
+    const response = await fetch(`/api/events/${encodeURIComponent(eventId)}/ack?deviceId=${encodeURIComponent(deviceId)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status })
     });
+    if (!response.ok) {
+      console.error(`failed to acknowledge event ${eventId}: HTTP ${response.status} ${response.statusText}`);
+    }
   } catch (error) {
     console.error('failed to acknowledge event', error);
   }
@@ -129,17 +134,16 @@ async function delay(durationMs: number, signal: AbortSignal) {
       return;
     }
 
+    const onAbort = () => {
+      clearTimeout(timeout);
+      resolve();
+    };
+
     const timeout = setTimeout(() => {
+      signal.removeEventListener('abort', onAbort);
       resolve();
     }, durationMs);
 
-    signal.addEventListener(
-      'abort',
-      () => {
-        clearTimeout(timeout);
-        resolve();
-      },
-      { once: true }
-    );
+    signal.addEventListener('abort', onAbort, { once: true });
   });
 }
