@@ -41,6 +41,11 @@ public class FrameEventValidator
                     throw new ValidationException("message is required for PopupText mode");
                 break;
 
+            case FrameEventMode.Banner:
+                if (string.IsNullOrWhiteSpace(dto.Message))
+                    throw new ValidationException("message is required for Banner mode");
+                break;
+
             case FrameEventMode.Close:
                 break;
 

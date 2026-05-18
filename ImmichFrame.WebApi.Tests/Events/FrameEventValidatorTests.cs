@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using ImmichFrame.Core.Events;
 using ImmichFrame.Core.Interfaces;
@@ -30,6 +32,18 @@ public class FrameEventValidatorTests
             Type = "frame.ui.v1",
             Mode = FrameEventMode.PopupText,
             Message = "Hello world"
+        };
+    }
+
+    private static FrameEventRequestDto MakeValidBanner()
+    {
+        return new FrameEventRequestDto
+        {
+            DeviceId = "device-1",
+            Id = "evt-banner-1",
+            Type = "frame.ui.banner",
+            Mode = FrameEventMode.Banner,
+            Message = "banner text"
         };
     }
 
@@ -114,5 +128,41 @@ public class FrameEventValidatorTests
 
         var result = _validator.Validate(dto);
         Assert.That(result.Mode, Is.EqualTo(FrameEventMode.Close));
+    }
+
+    [Test]
+    public void Validate_BannerWithMessage_Succeeds()
+    {
+        var dto = MakeValidBanner();
+
+        var domain = _validator.Validate(dto);
+
+        Assert.That(domain.Mode, Is.EqualTo(FrameEventMode.Banner));
+        Assert.That(domain.Message, Is.EqualTo("banner text"));
+    }
+
+    [Test]
+    public void Validate_BannerWithoutMessage_Throws()
+    {
+        var dto = MakeValidBanner();
+        dto.Message = null;
+
+        Assert.Throws<ValidationException>(() => _validator.Validate(dto));
+    }
+
+    [Test]
+    public void Validate_BannerWithTitleAndActions_StillValidates()
+    {
+        var dto = MakeValidBanner();
+        dto.Title = "banner title";
+        dto.Actions = new List<FrameEventActionDto>
+        {
+            new() { Id = "ack", Label = "OK", Kind = "primary" }
+        };
+
+        var domain = _validator.Validate(dto);
+
+        Assert.That(domain.Title, Is.EqualTo("banner title"));
+        Assert.That(domain.Actions, Has.Count.EqualTo(1));
     }
 }
