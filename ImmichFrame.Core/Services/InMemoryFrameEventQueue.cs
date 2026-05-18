@@ -19,12 +19,12 @@ public class InMemoryFrameEventQueue : IFrameEventQueue
         return Task.FromResult(queue.Enqueue(frameEvent));
     }
 
-    public Task<FrameEvent?> PeekNextAsync(string deviceId, CancellationToken cancellationToken = default)
+    public Task<FrameEvent?> PeekNextAsync(string deviceId, FrameEventMode? mode = null, CancellationToken cancellationToken = default)
     {
         if (!_queues.TryGetValue(deviceId, out var queue))
             return Task.FromResult<FrameEvent?>(null);
 
-        return Task.FromResult(queue.PeekNext());
+        return Task.FromResult(queue.PeekNext(mode));
     }
 
     public Task<bool> AckAsync(string deviceId, string eventId, FrameEventAckStatus status, CancellationToken cancellationToken = default)
@@ -57,7 +57,7 @@ public class InMemoryFrameEventQueue : IFrameEventQueue
         private readonly SortedSet<EventEntry> _entries = new(EventEntryComparer.Instance);
         private readonly Dictionary<string, EventEntry> _byId = new();
         private readonly Dictionary<string, EventEntry> _byCategory = new(StringComparer.OrdinalIgnoreCase);
-        private string? _activeEventId;
+        private readonly Dictionary<FrameEventMode, string> _activeEventIdByMode = new();
 
         public bool Enqueue(FrameEvent frameEvent)
         {
@@ -92,7 +92,7 @@ public class InMemoryFrameEventQueue : IFrameEventQueue
             }
         }
 
-        public FrameEvent? PeekNext()
+        public FrameEvent? PeekNext(FrameEventMode? mode = null)
         {
             lock (_lock)
             {
@@ -100,13 +100,25 @@ public class InMemoryFrameEventQueue : IFrameEventQueue
 
                 if (_entries.Count == 0)
                 {
-                    _activeEventId = null;
+                    _activeEventIdByMode.Clear();
                     return null;
                 }
 
-                var first = _entries.Min!;
-                _activeEventId = first.Event.Id;
-                return first.Event;
+                EventEntry? selected;
+                if (mode is null)
+                {
+                    selected = _entries.Min;
+                }
+                else
+                {
+                    selected = _entries.FirstOrDefault(e => e.Event.Mode == mode.Value);
+                }
+
+                if (selected is null)
+                    return null;
+
+                _activeEventIdByMode[selected.Event.Mode] = selected.Event.Id;
+                return selected.Event;
             }
         }
 
@@ -121,9 +133,10 @@ public class InMemoryFrameEventQueue : IFrameEventQueue
 
                 if (status != FrameEventAckStatus.Shown)
                 {
+                    var mode = entry.Event.Mode;
                     Remove(entry);
-                    if (_activeEventId == eventId)
-                        _activeEventId = null;
+                    if (_activeEventIdByMode.TryGetValue(mode, out var activeId) && activeId == eventId)
+                        _activeEventIdByMode.Remove(mode);
                 }
 
                 return true;
@@ -165,7 +178,7 @@ public class InMemoryFrameEventQueue : IFrameEventQueue
             _entries.Clear();
             _byId.Clear();
             _byCategory.Clear();
-            _activeEventId = null;
+            _activeEventIdByMode.Clear();
         }
 
         private void RemoveExpired()

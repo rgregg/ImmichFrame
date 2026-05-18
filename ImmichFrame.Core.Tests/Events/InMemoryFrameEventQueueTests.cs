@@ -15,6 +15,22 @@ public class InMemoryFrameEventQueueTests
         _queue = new InMemoryFrameEventQueue();
     }
 
+    private static FrameEvent MakeEvent(FrameEventMode mode, string id, string deviceId = "device-1", int priority = 0, string? category = null, int? timeoutMs = null)
+    {
+        return new FrameEvent
+        {
+            Id = id,
+            DeviceId = deviceId,
+            Type = "frame.ui.v1",
+            Mode = mode,
+            Message = $"Message for {id}",
+            Priority = priority,
+            Category = category,
+            TimeoutMs = timeoutMs,
+            PostedAt = DateTime.UtcNow
+        };
+    }
+
     private static FrameEvent MakeEvent(string id, string deviceId = "device-1", int priority = 0, string? category = null, int? timeoutMs = null)
     {
         return new FrameEvent
@@ -152,5 +168,57 @@ public class InMemoryFrameEventQueueTests
     {
         var snapshot = _queue.GetDeviceSnapshot("unknown");
         Assert.That(snapshot, Is.Empty);
+    }
+
+    [Test]
+    public async Task PeekNext_WithModeFilter_ReturnsOnlyMatchingMode()
+    {
+        await _queue.EnqueueAsync(MakeEvent(FrameEventMode.PopupText, "popup-1"));
+        await _queue.EnqueueAsync(MakeEvent(FrameEventMode.Banner, "banner-1"));
+
+        var popup = await _queue.PeekNextAsync("device-1", FrameEventMode.PopupText);
+        var banner = await _queue.PeekNextAsync("device-1", FrameEventMode.Banner);
+
+        Assert.That(popup, Is.Not.Null);
+        Assert.That(popup!.Id, Is.EqualTo("popup-1"));
+        Assert.That(banner, Is.Not.Null);
+        Assert.That(banner!.Id, Is.EqualTo("banner-1"));
+    }
+
+    [Test]
+    public async Task PeekNext_WithModeFilter_ReturnsNullWhenNoMatch()
+    {
+        await _queue.EnqueueAsync(MakeEvent(FrameEventMode.PopupText, "popup-1"));
+
+        var banner = await _queue.PeekNextAsync("device-1", FrameEventMode.Banner);
+
+        Assert.That(banner, Is.Null);
+    }
+
+    [Test]
+    public async Task PeekNext_AfterAckingPopup_BannerStillReturned()
+    {
+        await _queue.EnqueueAsync(MakeEvent(FrameEventMode.PopupText, "popup-1"));
+        await _queue.EnqueueAsync(MakeEvent(FrameEventMode.Banner, "banner-1"));
+
+        await _queue.AckAsync("device-1", "popup-1", FrameEventAckStatus.Closed);
+
+        var banner = await _queue.PeekNextAsync("device-1", FrameEventMode.Banner);
+        Assert.That(banner, Is.Not.Null);
+        Assert.That(banner!.Id, Is.EqualTo("banner-1"));
+    }
+
+    [Test]
+    public async Task PeekNext_NoModeFilter_ReturnsHighestPriorityRegardlessOfMode()
+    {
+        // The EventEntryComparer sorts ascending by priority (lower numeric value = higher effective priority).
+        // popup-low gets priority 10 (low effective priority), banner-high gets priority 0 (high effective priority).
+        await _queue.EnqueueAsync(MakeEvent(FrameEventMode.PopupText, "popup-low", priority: 10));
+        await _queue.EnqueueAsync(MakeEvent(FrameEventMode.Banner, "banner-high", priority: 0));
+
+        var top = await _queue.PeekNextAsync("device-1");
+
+        Assert.That(top, Is.Not.Null);
+        Assert.That(top!.Id, Is.EqualTo("banner-high"));
     }
 }

@@ -56,7 +56,7 @@ public class EventsController : ControllerBase
         if (!_settings.EventHostEnabled)
             return NotFound(new { message = "Event host is disabled" });
 
-        var frameEvent = await _queue.PeekNextAsync(deviceId, cancellationToken);
+        var frameEvent = await _queue.PeekNextAsync(deviceId, cancellationToken: cancellationToken);
 
         if (frameEvent is null)
             return NoContent();
