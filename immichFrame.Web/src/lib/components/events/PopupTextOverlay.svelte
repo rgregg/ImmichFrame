@@ -57,37 +57,92 @@
 <svelte:window onkeydown={handleKey} />
 
 <div
-	class="absolute inset-0 z-[150] flex items-center justify-center bg-black/60 p-6"
+	class="popup-root absolute inset-0 z-[150] flex items-center justify-center bg-black/30 p-6 backdrop-blur-sm"
 	role="presentation"
 	onpointerdown={handleBackdropPointerDown}
 >
 	<div
-		class="max-w-[min(28rem,90vw)] rounded-xl bg-neutral-900/95 p-6 text-white shadow-2xl ring-1 ring-white/10"
+		class="popup-card relative w-[80vw] max-w-[48rem] rounded-2xl bg-white/85 p-10 text-black shadow-2xl ring-1 ring-black/10 backdrop-blur motion-safe:animate-[popupin_180ms_ease-out] {allowTouchDismiss ? 'cursor-pointer' : ''}"
 		role="dialog"
 		aria-modal="true"
 		aria-labelledby={event.title ? 'popup-text-title' : undefined}
+		onpointerdown={(e) => {
+			if (!allowTouchDismiss) return;
+			if (e.target instanceof Element && e.target.closest('button')) return;
+			dismiss('Closed');
+		}}
 	>
-		{#if event.title}
-			<h2 id="popup-text-title" class="mb-2 text-2xl font-semibold">{event.title}</h2>
+		{#if secondsRemaining > 0}
+			<span class="popup-countdown absolute right-5 top-4 tabular-nums text-black/40">{secondsRemaining}s</span>
 		{/if}
-		<p class="mb-6 whitespace-pre-line text-lg leading-relaxed">{message}</p>
-		<div class="flex flex-wrap items-center gap-3">
+		{#if event.title}
+			<h2 id="popup-text-title" class="popup-title mb-4 text-center">{event.title}</h2>
+		{/if}
+		<p class="popup-message mb-8 whitespace-pre-line text-center">{message}</p>
+		<div class="flex flex-wrap items-center justify-center gap-4">
 			{#each actions as action}
 				<button
 					type="button"
-					class={`rounded-full px-4 py-2 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-neutral-900 ${
+					class={`popup-action rounded-full px-8 py-3 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white ${
 						action.kind === 'primary'
-							? 'bg-white text-black hover:bg-neutral-200 focus:ring-white/60'
-							: 'bg-white/10 text-white hover:bg-white/20 focus:ring-white/50'
+							? 'bg-black text-white hover:bg-neutral-800 focus:ring-black/40'
+							: 'bg-black/10 text-black hover:bg-black/20 focus:ring-black/30'
 					}`}
 					onclick={() => dismiss('Closed')}
 				>
 					{action.label}
 				</button>
 			{/each}
-			{#if secondsRemaining > 0}
-				<span class="ml-auto text-sm text-white/50">{secondsRemaining}s</span>
-			{/if}
 		</div>
 	</div>
 </div>
+
+<style>
+	.popup-root,
+	.popup-card {
+		font-family:
+			ui-sans-serif,
+			system-ui,
+			-apple-system,
+			'Segoe UI',
+			Roboto,
+			'Helvetica Neue',
+			Arial,
+			'Apple Color Emoji',
+			'Segoe UI Emoji',
+			'Noto Color Emoji',
+			sans-serif;
+	}
+
+	.popup-title {
+		font-size: clamp(1.5rem, 3.5vw, 2.75rem);
+		font-weight: 600;
+		letter-spacing: -0.015em;
+	}
+
+	.popup-message {
+		font-size: clamp(1.125rem, 2.5vw, 2rem);
+		font-weight: 400;
+		line-height: 1.4;
+	}
+
+	.popup-action {
+		font-size: clamp(1rem, 1.75vw, 1.5rem);
+		font-weight: 500;
+	}
+
+	.popup-countdown {
+		font-size: clamp(0.875rem, 1.25vw, 1.125rem);
+	}
+
+	@keyframes popupin {
+		from {
+			transform: scale(0.96);
+			opacity: 0;
+		}
+		to {
+			transform: scale(1);
+			opacity: 1;
+		}
+	}
+</style>
