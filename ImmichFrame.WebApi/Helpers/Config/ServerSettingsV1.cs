@@ -58,10 +58,22 @@ public class ServerSettingsV1 : IConfigSettable
     public bool PlayAudio { get; set; } = false;
     public string Layout { get; set; } = "splitview";
     public bool EventHostEnabled { get; set; } = false;
+
+    private int _eventPollingIntervalSeconds = 2;
     [Range(1, 3600)]
-    public int EventPollingIntervalSeconds { get; set; } = 2;
+    public int EventPollingIntervalSeconds
+    {
+        get => _eventPollingIntervalSeconds;
+        set => _eventPollingIntervalSeconds = Math.Clamp(value, 1, 3600);
+    }
+
+    private int _eventDefaultTimeoutMs = 15000;
     [Range(100, 300_000)]
-    public int EventDefaultTimeoutMs { get; set; } = 15000;
+    public int EventDefaultTimeoutMs
+    {
+        get => _eventDefaultTimeoutMs;
+        set => _eventDefaultTimeoutMs = Math.Clamp(value, 100, 300_000);
+    }
 }
 
 /// <summary>
@@ -142,7 +154,9 @@ public class ServerSettingsV1Adapter(ServerSettingsV1 _delegate) : IServerSettin
         public string Layout => _delegate.Layout;
         public string Language => _delegate.Language;
         public bool EventHostEnabled => _delegate.EventHostEnabled;
+        [Range(1, 3600)]
         public int EventPollingIntervalSeconds => _delegate.EventPollingIntervalSeconds;
+        [Range(100, 300_000)]
         public int EventDefaultTimeoutMs => _delegate.EventDefaultTimeoutMs;
 
         public void Validate() { }

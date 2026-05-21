@@ -74,10 +74,22 @@ public class GeneralSettings : IGeneralSettings, IConfigSettable
     public string? Webhook { get; set; }
     public string? AuthenticationSecret { get; set; }
     public bool EventHostEnabled { get; set; } = false;
+
+    private int _eventPollingIntervalSeconds = 2;
     [Range(1, 3600)]
-    public int EventPollingIntervalSeconds { get; set; } = 2;
+    public int EventPollingIntervalSeconds
+    {
+        get => _eventPollingIntervalSeconds;
+        set => _eventPollingIntervalSeconds = Math.Clamp(value, 1, 3600);
+    }
+
+    private int _eventDefaultTimeoutMs = 15000;
     [Range(100, 300_000)]
-    public int EventDefaultTimeoutMs { get; set; } = 15000;
+    public int EventDefaultTimeoutMs
+    {
+        get => _eventDefaultTimeoutMs;
+        set => _eventDefaultTimeoutMs = Math.Clamp(value, 100, 300_000);
+    }
 
     public void Validate() { }
 }
