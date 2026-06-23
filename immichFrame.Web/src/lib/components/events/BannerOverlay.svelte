@@ -14,13 +14,16 @@
 	async function dismiss(status: FrameEventAckStatus = 'Dismissed') {
 		if (dismissing) return;
 		dismissing = true;
-		await onDismiss(status);
-		dismissing = false;
+		try {
+			await onDismiss(status);
+		} finally {
+			dismissing = false;
+		}
 	}
 
 	function handleClick() {
 		if (!allowTouchDismiss) return;
-		dismiss('Dismissed');
+		void dismiss('Dismissed');
 	}
 </script>
 

@@ -34,14 +34,17 @@
 	async function dismiss(status: FrameEventAckStatus = 'Closed') {
 		if (dismissing) return;
 		dismissing = true;
-		await onDismiss(status);
-		dismissing = false;
+		try {
+			await onDismiss(status);
+		} finally {
+			dismissing = false;
+		}
 	}
 
 	function handleBackdropPointerDown(e: PointerEvent) {
 		if (!allowTouchDismiss) return;
 		if (e.target === e.currentTarget) {
-			dismiss('Closed');
+			void dismiss('Closed');
 		}
 	}
 
@@ -49,7 +52,7 @@
 		if (!allowKeyboardDismiss) return;
 		if (e.key === 'Escape') {
 			e.preventDefault();
-			dismiss('Closed');
+			void dismiss('Closed');
 		}
 	}
 </script>
@@ -69,7 +72,7 @@
 		onpointerdown={(e) => {
 			if (!allowTouchDismiss) return;
 			if (e.target instanceof Element && e.target.closest('button')) return;
-			dismiss('Closed');
+			void dismiss('Closed');
 		}}
 	>
 		{#if secondsRemaining > 0}
@@ -88,7 +91,7 @@
 							? 'bg-black text-white hover:bg-neutral-800 focus:ring-black/40'
 							: 'bg-black/10 text-black hover:bg-black/20 focus:ring-black/30'
 					}`}
-					onclick={() => dismiss('Closed')}
+					onclick={() => void dismiss('Closed')}
 				>
 					{action.label}
 				</button>
